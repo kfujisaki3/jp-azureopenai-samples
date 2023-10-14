@@ -14,6 +14,8 @@ from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import *
 from azure.search.documents import SearchClient
 from azure.ai.formrecognizer import DocumentAnalysisClient
+#追加
+from azure.identity import AzureCliCredential
 
 MAX_SECTION_LENGTH = 1000
 SENTENCE_SEARCH_LIMIT = 100
@@ -21,7 +23,7 @@ SECTION_OVERLAP = 100
 
 parser = argparse.ArgumentParser(
     description="Prepare documents by extracting content from PDFs, splitting content into sections, uploading to blob storage, and indexing in a search index.",
-    epilog="Example: prepdocs.py '..\data\*' --storageaccount myaccount --container mycontainer --searchservice mysearch --index myindex -v"
+    epilog="Example: prepdocs.py '..\\data\\*' --storageaccount myaccount --container mycontainer --searchservice mysearch --index myindex -v"
     )
 parser.add_argument("files", help="Files to be processed")
 parser.add_argument("--category", help="Value for the category field in the search index for all sections indexed in this run")
@@ -48,7 +50,8 @@ if args.managedidentitycredential:
 else:
     azd_credential = AzureDeveloperCliCredential() if args.tenantid is None else AzureDeveloperCliCredential(tenant_id=args.tenantid, process_timeout=60)
     default_creds = azd_credential if args.searchkey is None or args.storagekey is None else None
-search_creds = default_creds if args.searchkey is None else AzureKeyCredential(args.searchkey)
+#search_creds = search_creds = AzureCliCredential() if args.searchkey is None else AzureKeyCredential(args.searchkey)
+    search_creds = default_creds if args.searchkey is None else AzureKeyCredential(args.searchkey)
 
 if not args.skipblobs:
     storage_creds = default_creds if args.storagekey is None else args.storagekey
@@ -57,6 +60,7 @@ if not args.localpdfparser:
     if args.formrecognizerservice is None:
         print("Error: Azure Form Recognizer service is not provided. Please provide formrecognizerservice or use --localpdfparser for local pypdf parser.")
         exit(1)
+    #formrecognizer_creds = AzureCliCredential() if args.formrecognizerkey is None else AzureKeyCredential(args.formrecognizerkey)   
     formrecognizer_creds = default_creds if args.formrecognizerkey is None else AzureKeyCredential(args.formrecognizerkey)
 
 def blob_name_from_file_page(filename, page = 0):
@@ -98,7 +102,7 @@ def remove_blobs(filename):
             blobs = blob_container.list_blob_names()
         else:
             prefix = os.path.splitext(os.path.basename(filename))[0]
-            blobs = filter(lambda b: re.match(f"{prefix}-\d+\.pdf", b), blob_container.list_blob_names(name_starts_with=os.path.splitext(os.path.basename(prefix))[0]))
+            blobs = filter(lambda b: re.match(f"{prefix}-\\d+\\.pdf", b), blob_container.list_blob_names(name_starts_with=os.path.splitext(os.path.basename(prefix))[0]))
         for b in blobs:
             if args.verbose: print(f"\tRemoving blob {b}")
             blob_container.delete_blob(b)
